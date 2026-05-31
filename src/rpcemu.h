@@ -61,7 +61,7 @@ extern "C" {
 #endif
 
 
-#if defined __MACH__ || defined __OpenBSD__ || defined __FreeBSD__
+#if defined __MACH__ || defined __OpenBSD__ || defined __FreeBSD__ || defined __HAIKU__
 #define fseeko64(_a, _b, _c) fseeko(_a, _b, _c)
 #define ftello64(stream) ftello(stream)
 #define fopen64(_a, _b) fopen(_a, _b)
@@ -72,7 +72,7 @@ extern "C" {
 /* Note that networking is currently supported on Mac OS X with the Cocoa GUI
    version but not with the Allegro GUI. */
 #if defined __linux || defined __linux__ || defined WIN32 || defined _WIN32 || \
-    defined RPCEMU_COCOA_GUI || __APPLE__
+    defined RPCEMU_COCOA_GUI || __APPLE__ || defined __HAIKU__
 #define RPCEMU_NETWORKING
 #endif
 

@@ -44,6 +44,7 @@
 #include "keyboard.h"
 #include "main_window.h"
 #include "rpc-qt5.h"
+#include "plt_sound.h"
 #include "vidc20.h"
 
 #define URL_MANUAL	"http://www.marutan.net/rpcemu/manual/"
@@ -575,6 +576,8 @@ MainWindow::keyPressEvent(QKeyEvent *event)
 	if (!event->isAutoRepeat()) {
         #if defined(Q_OS_MACOS)
                 native_keypress_event(event->nativeVirtualKey(), event->nativeModifiers());
+        #elif defined(Q_OS_HAIKU)
+                native_keypress_event((unsigned)event->key(), event->nativeModifiers());
         #else
                 native_keypress_event(event->nativeScanCode(), event->nativeModifiers());
         #endif    /* Q_OS_MACOS */
@@ -599,6 +602,8 @@ MainWindow::keyReleaseEvent(QKeyEvent *event)
 	if (!event->isAutoRepeat()) {
 #if defined(Q_OS_MACOS)
         native_keyrelease_event(event->nativeVirtualKey(), event->nativeModifiers());
+#elif defined(Q_OS_HAIKU)
+        native_keyrelease_event((unsigned)event->key(), event->nativeModifiers());
 #else
         native_keyrelease_event(event->nativeScanCode(), event->nativeModifiers());
 #endif    /* Q_OS_MACOS */
@@ -638,7 +643,6 @@ MainWindow::native_keypress_event(unsigned scan_code, unsigned modifiers)
 		// Add the key to the list of held_keys, that will be released
 		// when the window loses the focus
 		held_keys.insert(held_keys.end(), scan_code);
-//        fprintf(stderr, "native_keypress_event sc=%d\n", scan_code);
 		emit this->emulator.key_press_signal(scan_code);
 
 	}

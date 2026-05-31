@@ -178,7 +178,9 @@ network_nat_open(void)
 
 		nat.slirp = slirp_init(restricted,
 		    net_addr, mask, host, vhostname, "", bootfile, dhcp, dns, NULL);
-
+#ifdef __HAIKU__
+		network_nat_thread_start();
+#endif
 		// TODO log NAT details
 
 		// Forwarded Ports
@@ -225,9 +227,14 @@ network_nat_reset(void)
 void
 network_nat_poll(void)
 {
+#ifndef __HAIKU__
 	fd_set rfds, wfds, efds;
 	int fd_max, ret;
 	struct timeval tv;
+
+	if (nat.slirp == NULL) {
+		return;
+	}
 
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
@@ -248,6 +255,7 @@ network_nat_poll(void)
 	}
 
 	slirp_select_poll(nat.slirp, &rfds, &wfds, &efds, ret <= 0);
+#endif /* !__HAIKU__ */
 }
 
 /**
@@ -420,3 +428,85 @@ network_nat_forward_edit(PortForwardRule old_rule, PortForwardRule new_rule)
 	network_nat_forward_remove(old_rule);
 	network_nat_forward_add(new_rule);
 }
+/*
+ * Haiku-specific threaded slirp polling.
+ *
+ * On Haiku, select() with a zero/short timeout never signals slirp's sockets
+ * as ready because the emulator main loop blocks Haiku's socket stack from
+ * completing TCP handshakes. The fix is to run slirp's select/poll loop in
+ * a dedicated background thread, protected by a mutex.
+ *
+ * To use: call network_nat_thread_start() after slirp_init(), and replace
+ * the body of network_nat_poll() with network_nat_poll_haiku().
+ */
+
+#include <pthread.h>
+
+#ifdef __HAIKU__
+#include <pthread.h>
+#include <unistd.h>
+
+static pthread_t nat_thread;
+static pthread_mutex_t nat_mutex = PTHREAD_MUTEX_INITIALIZER;
+static volatile int nat_thread_running = 0;
+
+static void *
+network_nat_thread_func(void *arg)
+{
+	(void)arg;
+	while (nat_thread_running) {
+		fd_set rfds, wfds, efds;
+		int fd_max, ret;
+		struct timeval tv;
+
+		FD_ZERO(&rfds);
+		FD_ZERO(&wfds);
+		FD_ZERO(&efds);
+		fd_max = -1;
+
+		pthread_mutex_lock(&nat_mutex);
+		if (nat.slirp == NULL) {
+			pthread_mutex_unlock(&nat_mutex);
+			usleep(10000);
+			continue;
+		}
+		slirp_select_fill(nat.slirp, &fd_max, &rfds, &wfds, &efds);
+		pthread_mutex_unlock(&nat_mutex);
+
+		if (fd_max < 0) {
+			pthread_mutex_lock(&nat_mutex);
+			slirp_select_poll(nat.slirp, &rfds, &wfds, &efds, 1);
+			pthread_mutex_unlock(&nat_mutex);
+			usleep(1000);
+			continue;
+		}
+
+		tv.tv_sec = 0;
+		tv.tv_usec = 10000;
+		ret = select(fd_max + 1, &rfds, &wfds, &efds, &tv);
+		if (ret < 0) {
+			usleep(1000);
+			continue;
+		}
+
+		pthread_mutex_lock(&nat_mutex);
+		slirp_select_poll(nat.slirp, &rfds, &wfds, &efds, ret == 0);
+		pthread_mutex_unlock(&nat_mutex);
+	}
+	return NULL;
+}
+
+void
+network_nat_thread_start(void)
+{
+	nat_thread_running = 1;
+	pthread_create(&nat_thread, NULL, network_nat_thread_func, NULL);
+}
+
+void
+network_nat_thread_stop(void)
+{
+	nat_thread_running = 0;
+	pthread_join(nat_thread, NULL);
+}
+#endif /* __HAIKU__ */

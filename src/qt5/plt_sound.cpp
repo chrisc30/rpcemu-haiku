@@ -72,6 +72,22 @@ AudioOut::AudioOut(uint32_t bufferlen)
 
 AudioOut::~AudioOut()
 {
+        if (audio_output != NULL) {
+                audio_io = NULL;
+#ifdef Q_OS_HAIKU
+                /* Do not delete QAudioOutput on Haiku - the BSoundPlayer
+                   Media Kit thread crashes if we destroy it. Accept the leak
+                   since this only happens at shutdown. */
+                audio_output->suspend();
+                audio_output->stop();
+                audio_output = NULL;
+#else
+                audio_output->stop();
+                QThread::msleep(100);
+                delete audio_output;
+                audio_output = NULL;
+#endif
+        }
 }
 
 /**
@@ -219,3 +235,15 @@ plt_sound_buffer_play(uint32_t samplerate, const char *buffer, uint32_t length)
 	}
 }
 
+
+void
+plt_sound_stop(void)
+{
+        QThread::msleep(100); /* Allow BMediaEventLooper to finish current buffer */
+        if (audio_out && audio_out->audio_output) {
+                audio_out->audio_output->suspend();
+                audio_out->audio_output->stop();
+                audio_out->audio_output->reset();
+                QThread::msleep(500);
+        }
+}

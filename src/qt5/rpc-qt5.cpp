@@ -33,6 +33,7 @@
 
 #include "main_window.h"
 #include "rpc-qt5.h"
+#include "plt_sound.h"
 
 #include <pthread.h>
 #include <sys/types.h>
@@ -872,6 +873,9 @@ Emulator::exit()
 	// This causes the emulator thread run() function to end
 	// It should also cause the vidc and sound threads to end
 	quited = 1;
+#ifdef Q_OS_HAIKU
+	plt_sound_stop();
+#endif
 
 	// Kill emulator thread
 	// This wakes up the GUI thread to continue the exit process

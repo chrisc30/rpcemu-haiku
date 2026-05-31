@@ -123,7 +123,11 @@ int get_dns_addr(struct in_addr *pdns_addr)
             return 0;
         }
         old_stat = dns_addr_stat;
+#ifdef __HAIKU__
+        if (stat("/boot/system/settings/network/resolv.conf", &dns_addr_stat) != 0)
+#else
         if (stat("/etc/resolv.conf", &dns_addr_stat) != 0)
+#endif
             return -1;
         if ((dns_addr_stat.st_dev == old_stat.st_dev)
             && (dns_addr_stat.st_ino == old_stat.st_ino)
@@ -134,7 +138,11 @@ int get_dns_addr(struct in_addr *pdns_addr)
         }
     }
 
+#ifdef __HAIKU__
+    f = fopen("/boot/system/settings/network/resolv.conf", "r");
+#else
     f = fopen("/etc/resolv.conf", "r");
+#endif
     if (!f)
         return -1;
 

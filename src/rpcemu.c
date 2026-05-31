@@ -471,6 +471,9 @@ rpcemu_idle(void)
 void
 endrpcemu(void)
 {
+#ifdef __HAIKU__
+        plt_sound_stop();
+#endif
         sound_thread_close();
         closevideo();
         iomd_end();

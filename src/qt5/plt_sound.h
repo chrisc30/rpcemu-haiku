@@ -44,3 +44,10 @@ public:
 };
 
 #endif // PLT_SOUND_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+void plt_sound_stop(void);
+#ifdef __cplusplus
+}
+#endif

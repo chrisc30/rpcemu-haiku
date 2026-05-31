@@ -5,3 +5,11 @@ CMakeLists.txt
 src/qt5/release/
 src/qt5/debug/
 /riscos-progs/RpcemuHelper/header.h
+rpcemu-interpreter
+rpclog.txt
+hd4.hdf
+cmos.ram
+roms/
+src/qt5/Makefile*
+src/qt5/.qmake.stash
+hostfs/
