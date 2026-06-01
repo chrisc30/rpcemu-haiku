@@ -125,4 +125,6 @@ arm_exception_undefined(void)
 	exception(UNDEFINED, 8, 4);
 }
 
+void arm_unpredictable(uint32_t opcode);
+
 #endif //__ARM__

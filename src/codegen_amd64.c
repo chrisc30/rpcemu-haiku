@@ -32,6 +32,7 @@
 #include "arm.h"
 #include "arm_common.h"
 #include "codegen_amd64.h"
+#include <sys/mman.h>
 #include "mem.h"
 
 int lastflagchange;

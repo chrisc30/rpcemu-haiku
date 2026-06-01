@@ -30,7 +30,7 @@ int blockend;
 #include <stdint.h>
 #include <time.h>
 
-#if defined __linux__ || defined __MACH__
+#if defined __linux__ || defined __MACH__ || defined __HAIKU__
 #	include <unistd.h>
 #	include <sys/mman.h>
 #elif defined WIN32 || defined _WIN32

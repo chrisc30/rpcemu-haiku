@@ -45,7 +45,6 @@ static uint8_t flaglookup[16][16];
 uint32_t *usrregs[16];
 int prog32;
 
-static int unpredictable_count = 1000; ///< Limit logging of unpredictable instructions
 
 #define NFSET	((arm.reg[cpsr] & NFLAG) ? 1u : 0)
 #define ZFSET	((arm.reg[cpsr] & ZFLAG) ? 1u : 0)
@@ -528,7 +527,8 @@ exception(uint32_t mmode, uint32_t address, uint32_t diff)
  *
  * @param opcode Opcode of instruction being emulated
  */
-static void
+static int unpredictable_count = 1000;
+void
 arm_unpredictable(uint32_t opcode)
 {
 	if (unpredictable_count != 0) {

@@ -158,10 +158,6 @@ linux {
 			network_dialog.h
 }
 
-
-
-
-
 haiku {
 	SOURCES +=	../network-haiku.c \
 			../network-nat.c \
@@ -220,12 +216,18 @@ haiku {
 	LIBS += -lnetwork
 }
 
-!macx {
+!macx:!haiku {
 	unix {
 		SOURCES +=	keyboard_x.c \
 				../hostfs-unix.c \
 				../rpc-linux.c
 	}
+}
+
+haiku {
+	SOURCES +=	keyboard_haiku.c \
+			../hostfs-unix.c \
+			../rpc-linux.c
 }
 
 macx {
@@ -262,12 +264,18 @@ CONFIG(dynarec) {
 	HEADERS +=	../ArmDynarecOps.h \
 			../codegen_x86_common.h
 
-	contains(QMAKE_HOST.arch, x86_64):!win32: { # win32 always uses 32bit dynarec
+	haiku {
+		# Haiku x86_64: QMAKE_HOST.arch returns unknown, force amd64 dynarec
 		HEADERS +=	../codegen_amd64.h
 		SOURCES +=	../codegen_amd64.c
 	} else {
-		HEADERS +=	../codegen_x86.h
-		SOURCES +=	../codegen_x86.c
+		contains(QMAKE_HOST.arch, x86_64):!win32: { # win32 always uses 32bit dynarec
+			HEADERS +=	../codegen_amd64.h
+			SOURCES +=	../codegen_amd64.c
+		} else {
+			HEADERS +=	../codegen_x86.h
+			SOURCES +=	../codegen_x86.c
+		}
 	}
 	
 	win32|macx {
@@ -305,4 +313,3 @@ macx {
 
 	QMAKE_INFO_PLIST = ../macosx/Info.plist
 }
-

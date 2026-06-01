@@ -13,3 +13,11 @@ roms/
 src/qt5/Makefile*
 src/qt5/.qmake.stash
 hostfs/
+rpcemu-interpreter
+rpclog.txt
+hd4.hdf
+cmos.ram
+roms/
+src/qt5/Makefile*
+src/qt5/.qmake.stash
+hostfs/
