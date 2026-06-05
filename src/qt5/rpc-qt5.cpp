@@ -34,6 +34,16 @@
 #include "main_window.h"
 #include "rpc-qt5.h"
 #include "plt_sound.h"
+#include <signal.h>
+#ifdef Q_OS_HAIKU
+static void haiku_crash_handler(int sig) {
+        fprintf(stderr, "Signal %d caught, stopping sound\n", sig);
+        fflush(stderr);
+        plt_sound_stop();
+        signal(sig, SIG_DFL);
+        raise(sig);
+}
+#endif
 
 #include <pthread.h>
 #include <sys/types.h>
@@ -376,7 +386,7 @@ rpcemu_video_update(const uint32_t *buffer, int xsize, int ysize,
 	video_update.host_ysize = host_ysize;
 
 	// Send update message to GUI
-	emit pMainWin->main_display_signal(video_update);
+    QMetaObject::invokeMethod(pMainWin, "main_display_update", Qt::BlockingQueuedConnection, Q_ARG(VideoUpdate, video_update));
 
 	// Send flyback message to emulator thread
 	emit emulator->video_flyback_signal();
@@ -393,6 +403,9 @@ rpcemu_video_update(const uint32_t *buffer, int xsize, int ysize,
 void
 rpcemu_move_host_mouse(uint16_t x, uint16_t y)
 {
+#ifdef Q_OS_HAIKU
+        (void)x; (void)y; return;
+#endif
 	MouseMoveUpdate mouse_update;
 
 	mouse_update.x = x;
@@ -436,7 +449,7 @@ void rpcemu_set_host_clipboard(int file_type, const char *data, unsigned int dat
         case 0xfff: {
                 QString txt = QString::fromUcs4((uint *) data, data_len / 4);
 //                fprintf(stderr, "rpcemu_set_host_clipboard len:%d strlen:%d str:'%s'\n", data_len / 4, txt.length(), txt.toUtf8().data());
-                emit pMainWin->guest_clipboard_data_changed_signal(txt, QImage());
+                if (pMainWin) emit pMainWin->guest_clipboard_data_changed_signal(txt, QImage());
             }
             break;
         case 0xc85: {
@@ -448,7 +461,7 @@ void rpcemu_set_host_clipboard(int file_type, const char *data, unsigned int dat
                     rpclog("clipboard JPG img.loadFromData() failed\n");
                     return;
                 }
-                emit pMainWin->guest_clipboard_data_changed_signal(QString(), img);
+                if (pMainWin) emit pMainWin->guest_clipboard_data_changed_signal(QString(), img);
             }
         case 0xb60: {
                 QImage img;
@@ -459,7 +472,7 @@ void rpcemu_set_host_clipboard(int file_type, const char *data, unsigned int dat
                     rpclog("clipboard PNG img.loadFromData() failed\n");
                     return;
                 }
-                emit pMainWin->guest_clipboard_data_changed_signal(QString(), img);
+                if (pMainWin) emit pMainWin->guest_clipboard_data_changed_signal(QString(), img);
             }
             break;
         default:
@@ -514,6 +527,10 @@ int main (int argc, char ** argv)
 
 	// Initialise QT app
 	QApplication app(argc, argv);
+#ifdef Q_OS_HAIKU
+	/* signal handler disabled for crash report */
+	/* signal handler disabled for crash report */
+#endif
 
 	// Add a program icon
 	QApplication::setWindowIcon(QIcon(":/rpcemu_icon.png"));

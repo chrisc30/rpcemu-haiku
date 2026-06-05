@@ -601,5 +601,6 @@ getpccache(uint32_t addr)
 			return &ram1[((uintptr_t) (phys_addr & 0x7ffffff) - (uintptr_t) addr) >> 2];
 		}
 	}
-	fatal("Bad PC %08x %08x\n", addr, phys_addr);
+        rpclog("Bad PC %08x %08x\n", addr, phys_addr);
+        return NULL;
 }

@@ -23,7 +23,7 @@
 
 #define BLOCKS 1024
 
-extern uint8_t rcodeblock[BLOCKS][1792];
+extern uint8_t (*rcodeblock)[1792];
 extern uint32_t codeblockpc[0x8000];
 extern int codeblocknum[0x8000];
 

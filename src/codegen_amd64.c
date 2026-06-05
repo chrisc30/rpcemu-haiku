@@ -37,7 +37,7 @@
 
 int lastflagchange;
 
-uint8_t rcodeblock[BLOCKS][1792] __attribute__ ((aligned (4096)));
+uint8_t (*rcodeblock)[1792] = NULL;
 static const void *codeblockaddr[BLOCKS];
 uint32_t codeblockpc[0x8000];
 int codeblocknum[0x8000];
@@ -174,19 +174,35 @@ gen_x86_mov_stack_reg32(int x86reg, int offset)
 void
 initcodeblocks(void)
 {
-	int c;
-
-	// Clear all blocks
-	memset(codeblockpc, 0xff, sizeof(codeblockpc));
-	memset(blocks, 0xff, sizeof(blocks));
-	for (c = 0; c < BLOCKS; c++) {
-		codeblockaddr[c] = &rcodeblock[c][0];
-	}
-	blockpoint = 0;
-
-	// Set memory pages containing rcodeblock[]s executable -
-	// necessary when NX/XD feature is active on CPU(s)
-	set_memory_executable(rcodeblock, sizeof(rcodeblock));
+        int c;
+        if (rcodeblock == NULL) {
+                size_t _sz = BLOCKS * 1792;
+                extern uint8_t flaglookup[16][16];
+                uintptr_t _anchor = (uintptr_t)&flaglookup[0][0];
+                void *_addr = MAP_FAILED;
+                uintptr_t _try;
+                for (_try = (_anchor & ~0xfffffUL) + 0x100000;
+                     _try < _anchor + 0x40000000UL && _addr == MAP_FAILED;
+                     _try += 0x100000) {
+                        _addr = mmap((void*)_try, _sz,
+                                PROT_READ|PROT_WRITE|PROT_EXEC,
+                                MAP_PRIVATE|MAP_ANON|MAP_FIXED, -1, 0);
+                        if (_addr != (void*)_try) {
+                                if (_addr != MAP_FAILED) munmap(_addr, _sz);
+                                _addr = MAP_FAILED;
+                        }
+                }
+                if (_addr == MAP_FAILED) { perror("mmap rcodeblock"); exit(1); }
+                fprintf(stderr, "rcodeblock at %p anchor=%p\n", _addr, (void*)_anchor);
+                fflush(stderr);
+                rcodeblock = (uint8_t (*)[1792])_addr;
+        }
+        memset(codeblockpc, 0xff, sizeof(codeblockpc));
+        memset(blocks, 0xff, sizeof(blocks));
+        for (c = 0; c < BLOCKS; c++) {
+                codeblockaddr[c] = &rcodeblock[c][0];
+        }
+        blockpoint = 0;
 }
 
 void

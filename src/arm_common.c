@@ -673,3 +673,14 @@ realswi:
 	return 0;
 }
 #endif /* ifndef TEST */
+
+static int unpredictable_count = 1000;
+
+void
+arm_unpredictable(uint32_t opcode)
+{
+        if (unpredictable_count != 0) {
+                unpredictable_count--;
+                rpclog("ARM: Unpredictable opcode %08x at %08x\n", opcode, PC);
+        }
+}

@@ -1182,7 +1182,7 @@ MainWindow::create_actions()
 
 	connect(this, &MainWindow::main_display_signal, this, &MainWindow::main_display_update, Qt::BlockingQueuedConnection);
 //	connect(this, &MainWindow::main_display_signal, this, &MainWindow::main_display_update);
-	connect(this, &MainWindow::move_host_mouse_signal, this, &MainWindow::move_host_mouse);
+	connect(this, &MainWindow::move_host_mouse_signal, this, &MainWindow::move_host_mouse, Qt::QueuedConnection);
 	connect(this, &MainWindow::send_nat_rule_to_gui_signal, this, &MainWindow::send_nat_rule_to_gui);
 
 	// connect guest clipboard data changed signal (needs because in windows clipboard must be updated from main thread)
