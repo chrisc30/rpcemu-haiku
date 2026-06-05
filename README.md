@@ -4,11 +4,10 @@ A port of [RPCEmu](https://www.marutan.net/rpcemu/) — the Acorn Risc PC and A7
 
 Based on the [Cloverleaf fork](https://github.com/riscoscloverleaf/rpcemu) (v0.9.4) with additional patches for Haiku.
 
-![RPCEmu running RISC OS 5 on Haiku](screenshot.png)
-
 ## Features
 
 - Runs RISC OS 3.x and RISC OS 5 on Haiku (x86_64)
+- Two build modes: **interpreter** (stable) and **recompiler/dynarec** (faster)
 - NAT networking with internet access (HTTP, DNS)
 - HostFS integration (share files between Haiku and RISC OS)
 - Sound output via Haiku Media Kit
@@ -33,13 +32,23 @@ pkgman install qt5 qt5_devel qt5_multimedia qt5_multimedia_devel make
 Clone and build:
 
 ```sh
-git clone https://github.com/YOUR_USERNAME/rpcemu-haiku.git
+git clone https://github.com/chrisc30/rpcemu-haiku.git
 cd rpcemu-haiku/src/qt5
+```
+
+**Interpreter** (stable, recommended):
+```sh
 /boot/system/bin/qmake rpcemu.pro
 make -j$(nproc)
 ```
 
-The binary is placed in the repository root as `rpcemu-interpreter`.
+**Recompiler** (faster, experimental):
+```sh
+/boot/system/bin/qmake CONFIG+=dynarec rpcemu.pro
+make -j$(nproc)
+```
+
+The binaries are placed in the repository root as `rpcemu-interpreter` or `rpcemu-recompiler`.
 
 ## Setup
 
@@ -52,13 +61,17 @@ The binary is placed in the repository root as `rpcemu-interpreter`.
    ```sh
    ./rpcemu-interpreter
    ```
+   or
+   ```sh
+   ./rpcemu-recompiler
+   ```
 
 The emulator must be run from its own directory so it can find `roms/`, `hostfs/`, `rpc.cfg` etc. When launched from Haiku's Tracker, a wrapper script is recommended:
 
 ```sh
 #!/bin/sh
 cd "$(dirname "$0")"
-exec ./rpcemu-interpreter
+exec ./rpcemu-interpreter "$@"
 ```
 
 ## Networking
@@ -73,6 +86,8 @@ Slirp assigns IP `10.10.10.10` to the emulated machine with gateway `10.10.10.2`
 
 ## Haiku-specific patches
 
+### Interpreter and recompiler
+
 | File | Change |
 |---|---|
 | `src/rpcemu.h` | LFS64 compat (`fopen64` etc.) and `RPCEMU_NETWORKING` for Haiku |
@@ -83,17 +98,28 @@ Slirp assigns IP `10.10.10.10` to the emulated machine with gateway `10.10.10.2`
 | `src/slirp/slirp.c` | Use `/boot/system/settings/network/resolv.conf` for DNS |
 | `src/qt5/rpcemu.pro` | `haiku {}` platform block |
 | `src/qt5/keyboard_haiku.c` | Qt::Key → PS/2 Set 2 mapping (Haiku Qt returns 0 for nativeScanCode) |
-| `src/qt5/main_window.cpp` | Use `event->key()` on Haiku; stop audio on close |
-| `src/qt5/rpc-qt5.cpp` | Set data dir from `applicationDirPath()`; stop audio before exit |
+| `src/qt5/main_window.cpp` | Use `event->key()` on Haiku; stop audio on close; queued connection for mouse signal |
+| `src/qt5/rpc-qt5.cpp` | Set data dir from `applicationDirPath()`; stop audio before exit; use `QMetaObject::invokeMethod` for video update; SIGSEGV handler for clean shutdown; disable mouse warp signal (cross-thread crash) |
 | `src/qt5/plt_sound.cpp` | Clean `QAudioOutput` shutdown to prevent `BSoundPlayer` crash |
 | `src/qt5/plt_sound.h` | Declare `plt_sound_stop()` with C linkage |
+| `src/cp15.c` | Return NULL instead of `fatal()` for unknown PC addresses |
+
+### Recompiler only
+
+| File | Change |
+|---|---|
+| `src/codegen_amd64.c` | Allocate JIT code buffer via `mmap` near BSS (within 32-bit RIP-relative range) instead of static array — fixes PIE/ASLR crash on Haiku |
+| `src/codegen_amd64.h` | Update `rcodeblock` declaration to pointer type |
+| `src/ArmDynarec.c` | Add `__HAIKU__` to `set_memory_executable` mprotect guard |
+| `src/arm.c` | Make `arm_unpredictable()` non-static for dynarec linkage |
+| `src/arm.h` | Declare `arm_unpredictable()` extern |
+| `src/arm_common.c` | Add `arm_unpredictable()` for dynarec build |
 
 ## Known issues
 
-- Dynarec (recompiler) not tested — interpreter mode works
+- The recompiler may produce a crash report on some shutdowns due to Haiku's `BSoundPlayer` lifecycle — this is cosmetic and can be dismissed
+- Mouse warp (follows-host-mouse mode) is disabled in the recompiler due to a Qt cross-thread signal limitation on Haiku
 - TUN/TAP bridging and IP tunnelling not available (NAT only)
-- Some keyboard shortcuts may not map correctly on non-US layouts
-- Sound may produce a crash report on exit if closed mid-playback (harmless)
 
 ## Upstream
 
