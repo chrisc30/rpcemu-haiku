@@ -48,6 +48,8 @@ make -j$(nproc)
 make -j$(nproc)
 ```
 
+> **Note:** Run `make clean` between switching build types (interpreter ↔ recompiler), otherwise shared object files from the previous build may be reused incorrectly.
+
 The binaries are placed in the repository root as `rpcemu-interpreter` or `rpcemu-recompiler`.
 
 ## Setup
