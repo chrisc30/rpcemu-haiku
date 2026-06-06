@@ -674,6 +674,7 @@ realswi:
 }
 #endif /* ifndef TEST */
 
+#ifndef RPCEMU_INTERPRETER
 static int unpredictable_count = 1000;
 
 void
@@ -684,3 +685,4 @@ arm_unpredictable(uint32_t opcode)
                 rpclog("ARM: Unpredictable opcode %08x at %08x\n", opcode, PC);
         }
 }
+#endif /* RPCEMU_INTERPRETER */

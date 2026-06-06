@@ -284,6 +284,7 @@ CONFIG(dynarec) {
 		TARGET = rpcemu-recompiler
 	}
 } else {
+	DEFINES += RPCEMU_INTERPRETER
 	SOURCES +=	../arm.c \
 			../codegen_null.c
 	win32|macx {
